@@ -10,17 +10,22 @@ import io.micronaut.http.annotation.Patch
 import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.Produces
+import io.micronaut.security.annotation.Secured
+import io.micronaut.security.authentication.Authentication
+import io.micronaut.security.rules.SecurityRule
+import micronaut.demo.adapter.controller.request.CreateTaskRequest
+import micronaut.demo.adapter.controller.request.UpdateTaskRequest
+import micronaut.demo.adapter.controller.response.TaskResponse
+import micronaut.demo.adapter.controller.response.toResponse
 import micronaut.demo.application.usecase.CreateTaskUsecase
 import micronaut.demo.application.usecase.DeleteTaskUsecase
 import micronaut.demo.application.usecase.ListTaskUsecase
 import micronaut.demo.application.usecase.UpdateTaskUsecase
-import micronaut.demo.adapter.controller.request.CreateTaskRequest
-import micronaut.demo.adapter.controller.request.UpdateTaskRequest
-import micronaut.demo.adapter.controller.response.TaskResponse
 
 @Controller("/tasks")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
+@Secured(SecurityRule.IS_AUTHENTICATED)
 class TaskController(
     private val createTaskUsecase: CreateTaskUsecase,
     private val listTaskUsecase: ListTaskUsecase,
@@ -29,29 +34,46 @@ class TaskController(
 ) {
     @Post
     fun createTask(
+        authentication: Authentication,
         @Body body: CreateTaskRequest,
     ): TaskResponse {
-        TODO()
+        val userId = extractUserId(authentication)
+        val task = createTaskUsecase.execute(userId, body.title, body.description)
+        return task.toResponse()
     }
 
     @Get
-    fun listTasks(): List<TaskResponse> {
-        TODO()
+    fun listTasks(
+        authentication: Authentication,
+    ): List<TaskResponse> {
+        val userId = extractUserId(authentication)
+        return listTaskUsecase.execute(userId)
+            .map { it.toResponse() }
     }
 
     @Patch("/{id}")
     @Consumes(MediaType.APPLICATION_JSON_MERGE_PATCH)
     fun updateTask(
+        authentication: Authentication,
         @PathVariable id: Long,
         @Body body: UpdateTaskRequest,
     ): TaskResponse {
-        TODO()
+        val userId = extractUserId(authentication)
+        val task = updateTaskUsecase.execute(userId, id, body.title, body.description, body.isCompleted)
+        return task.toResponse()
     }
 
     @Delete("/{id}")
     fun deleteTask(
+        authentication: Authentication,
         @PathVariable id: Long,
     ) {
-        TODO()
+        val userId = extractUserId(authentication)
+        deleteTaskUsecase.execute(userId, id)
+    }
+
+    private fun extractUserId(authentication: Authentication): Long {
+        return authentication.attributes["userId"] as? Long
+            ?: throw IllegalArgumentException("User ID not found in authentication attributes")
     }
 }
