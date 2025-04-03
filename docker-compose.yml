@@ -1,0 +1,15 @@
+services:
+  micronaut-demo-db:
+    image: postgres:17.4
+    container_name: postgres_17
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: demo
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
